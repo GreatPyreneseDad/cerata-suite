@@ -1,0 +1,9 @@
+# generated data — contains real attendee names / RSVPs. NEVER commit.
+panel/forecast-data.js
+**/edge_pull.json
+**/cohorts*.json
+**/forecast*.json
+# python
+__pycache__/
+*.pyc
+.DS_Store
