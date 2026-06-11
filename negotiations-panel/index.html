@@ -43,12 +43,18 @@ h1{font-size:17px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bot
 .btn{background:#241a1e;border:1px solid var(--rose);color:var(--ink);border-radius:9px;padding:9px 18px;cursor:pointer;font-size:13px;margin:8px 4px}
 .hint{color:var(--faint);font-size:12px}
 .reopen-card{border-color:#4a432c;background:#221d12}
+.urg{margin-left:auto;display:flex;align-items:center;gap:7px}
+.urg-bar{width:90px;height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.urg-bar i{display:block;height:100%}
+.urg b{font-variant-numeric:tabular-nums;font-size:12px;width:34px;text-align:right}
+.meta-line{font-size:11.5px;margin-top:5px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script src="negotiations-data.js" onerror="void 0"></script>
+<script src="offers-enrich.js" onerror="void 0"></script>
 <script>
 // ---------- ingest (window.RAW_NEGOTIATIONS, pre-built; else paste/upload) ----------
 function getRaw(){
@@ -111,11 +117,47 @@ function surface(items){
 }
 
 // ---------- render ----------
-let DATA=[], FILTER="all", Q="";
-const F_DEFS=[["all","All"],["accept","Accepted"],["inbound","Inbound (came to you)"],["reopen","Re-open candidates"],["mismatch","True mismatches"],["glitch","Glitched (retry)"]];
-function counts(){ const c={all:DATA.length}; DATA.forEach(x=>c[x.cls]=(c[x.cls]||0)+1); return c; }
+let DATA=[], FILTER="offers", Q="";
+const F_DEFS=[["offers","⚡ Offers (urgency)"],["all","All"],["accept","Accepted"],["inbound","Inbound (came to you)"],["reopen","Re-open candidates"],["mismatch","True mismatches"],["glitch","Glitched (retry)"]];
+const DEP = window.OFFER_DEPARTURES || {};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// urgency = probability this offer needs action NOW (decays/closes if you wait)
+function urgency(x){
+  const base = x.cls==="inbound"?0.55 : x.cls==="reopen"?0.42 : x.cls==="accept"?0.38 : 0.2;
+  const strength = Math.min((x.turns||0)/25,1)*0.15;            // negotiation depth = invested stakes
+  const d = DEP[(x.name||"").toLowerCase()];
+  let depP=0, note="dates unknown", soon=false;
+  if(d){
+    if(d.hereNow){
+      depP = clamp((10-d.daysLeft)/10,0,1)*0.42;                 // leaving soon ramps hard
+      note = d.daysLeft<=0 ? `leaving today (wk ${d.weeks.join('+')})` : `here now · leaves in ${d.daysLeft}d (${d.leaveDate})`;
+      soon = d.daysLeft<=4;
+    } else if((d.arrivesIn||0)>0){ depP=-0.28; note=`not here yet · arrives in ${d.arrivesIn}d (wk ${d.weeks.join('+')})`; }
+    else { depP=-0.4; note=`window passed (wk ${d.weeks.join('+')})`; }
+  }
+  return {u:clamp(base+strength+depP,0,1), note, soon};
+}
+function counts(){ const c={all:DATA.length}; DATA.forEach(x=>c[x.cls]=(c[x.cls]||0)+1); c.offers=(c.inbound||0)+(c.accept||0)+(c.reopen||0); return c; }
 function visible(){
-  return DATA.filter(x=>(FILTER==="all"||x.cls===FILTER)&&(!Q||x.name.toLowerCase().includes(Q)||x.prev.toLowerCase().includes(Q)));
+  const m=x=>!Q||x.name.toLowerCase().includes(Q)||x.prev.toLowerCase().includes(Q);
+  if(FILTER==="offers"){
+    const seen=new Set(), list=[];
+    DATA.filter(x=>["inbound","accept","reopen"].includes(x.cls)&&m(x))
+      .map(x=>({x,u:urgency(x).u})).sort((a,b)=>b.u-a.u)
+      .forEach(o=>{ const k=o.x.name.toLowerCase(); if(!seen.has(k)){ seen.add(k); list.push(o.x); } });
+    return list;
+  }
+  return DATA.filter(x=>(FILTER==="all"||x.cls===FILTER)&&m(x));
+}
+function offerRow(x){
+  const {u,note,soon}=urgency(x), pct=Math.round(u*100);
+  const col=u>0.66?'var(--bad)':u>0.42?'var(--gold)':'var(--teal)';
+  const role=x.role==="candidate"?'<span class="tag role">inbound→you</span>':'<span class="tag role">you→them</span>';
+  return `<div class="row" data-id="${escAttr(x.id)}">
+    <div class="top"><span class="nm">${esc(x.name)}</span><span class="tag ${x.cls}">${x.cls}</span>${role}
+      <span class="urg"><span class="urg-bar"><i style="width:${pct}%;background:${col}"></i></span><b style="color:${col}">${pct}%</b></span></div>
+    <div class="meta-line">${soon?'⚡ ':''}<span class="muted">${esc(note)} · ${x.turns} turns</span></div>
+    <div class="why">${esc(x.prev)}</div></div>`;
 }
 function render(){
   const c=counts(), s=surface(DATA);
@@ -153,7 +195,8 @@ function render(){
        </div>`:""}
        <div class="card">
          <h2>${F_DEFS.find(f=>f[0]===FILTER)[1]} <span class="muted">· ${visible().length}</span></h2>
-         ${visible().map(rowHtml).join("")||'<div class="hint">none</div>'}
+         ${FILTER==="offers"?`<div class="hint" style="margin:-4px 0 10px">ranked by urgency — base offer strength × departure pressure (when they leave Edge). ⚡ = leaving within 4 days.</div>`:""}
+         ${visible().map(FILTER==="offers"?offerRow:rowHtml).join("")||'<div class="hint">none</div>'}
        </div>
      </main>
    </div>`;

@@ -11,3 +11,6 @@ __pycache__/
 # negotiations display data — other people's names + reasoning. NEVER commit.
 negotiations-panel/negotiations-data.js
 **/negotiations-data.js
+
+# offer urgency enrichment — personal departure data. NEVER commit.
+**/offers-enrich.js
