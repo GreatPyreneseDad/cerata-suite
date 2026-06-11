@@ -39,8 +39,9 @@ PERCEIVE  →  PREDICT  →  PRICE  →  SETTLE
 | ♻️ | **cerata-reflect** | the connections your gate wrongly rejected | [`skills/cerata-reflect`](skills/cerata-reflect) |
 | 📐 | **cerata-surface** | the geometry of your agent's own decision surface | [`skills/cerata-surface`](skills/cerata-surface) |
 | 🖥 | **the panel** | the display — reads + the attention market | [`panel/`](panel) |
+| 📋 | **negotiations panel** | display your agent's negotiation history (reflect + surface, client-side) | [`negotiations-panel/`](negotiations-panel) |
 
-`connect` finds people *for* you · `weave` finds who holds *whom* · `cohort` predicts who goes where · `reflect` recovers who the gate dropped · `surface` shows the gate that dropped them · the **panel** renders all of it and runs the attention market.
+`connect` finds people *for* you · `weave` finds who holds *whom* · `cohort` predicts who goes where · `reflect` recovers who the gate dropped · `surface` shows the gate that dropped them · the **panel** renders the reads + runs the attention market · the **negotiations panel** displays your whole negotiation history (drop in your own `list_negotiations` export — classification runs in your browser).
 
 ---
 

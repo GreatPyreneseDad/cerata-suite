@@ -7,3 +7,7 @@ panel/forecast-data.js
 __pycache__/
 *.pyc
 .DS_Store
+
+# negotiations display data — other people's names + reasoning. NEVER commit.
+negotiations-panel/negotiations-data.js
+**/negotiations-data.js

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>🪸 Negotiations — cerata</title>
+<style>
+:root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222c;--line:#2a2f3a;--ink:#e7e9ee;--dim:#9aa3b2;--faint:#6b7280;
+ --rose:#ff7a8a;--teal:#56d3c2;--gold:#e8c468;--good:#5ad19a;--warn:#e8a36a;--bad:#ff7a8a;--violet:#9a8cff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:18px 15px;position:sticky;top:0;height:100vh;overflow:auto}
+.main{padding:22px 28px;overflow:auto;max-height:100vh}
+h1{font-size:17px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+.search{width:100%;padding:9px 11px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:13px}
+.search:focus{outline:none;border-color:var(--rose)}
+.stat-row{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 9px;flex:1;min-width:62px}
+.stat b{display:block;font-size:17px}.stat span{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px}
+.sec{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin:16px 0 7px}
+.filt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+ padding:7px 10px;margin-bottom:5px;cursor:pointer;color:var(--dim);font-size:13px;display:flex;justify-content:space-between}
+.filt:hover{border-color:var(--rose)}.filt.on{color:var(--ink);border-color:var(--rose);background:#241a1e}
+.filt .n{color:var(--gold);font-variant-numeric:tabular-nums}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:18px}.card h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin:0 0 8px}
+.gauge{margin:7px 0}.gauge .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:3px}
+.gauge .trk{height:8px;background:var(--panel2);border-radius:5px;overflow:hidden}.gauge .fl{height:100%}
+.row{border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:8px;background:var(--panel2);cursor:pointer}
+.row:hover{border-color:var(--line)}
+.row .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.row .nm{font-size:14px;font-weight:600}
+.tag{font-size:10px;padding:1.5px 7px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+.tag.accept{color:var(--good);border-color:#2c4a3a}.tag.reject{color:var(--bad);border-color:#4a2c34}
+.tag.inbound{color:var(--teal);border-color:#2c4a46}.tag.reopen{color:var(--gold);border-color:#4a432c}
+.tag.mismatch{color:var(--faint)}.tag.glitch{color:var(--violet);border-color:#3a3360}
+.tag.role{color:var(--faint)}
+.why{color:var(--dim);font-size:12.5px;margin-top:7px;display:none}.row.open .why{display:block}
+.muted{color:var(--faint)}.turns{margin-left:auto;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
+.loader{max-width:680px;margin:60px auto;text-align:center}
+.loader textarea{width:100%;height:160px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:12px;font:12px/1.5 ui-monospace,monospace}
+.btn{background:#241a1e;border:1px solid var(--rose);color:var(--ink);border-radius:9px;padding:9px 18px;cursor:pointer;font-size:13px;margin:8px 4px}
+.hint{color:var(--faint);font-size:12px}
+.reopen-card{border-color:#4a432c;background:#221d12}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="negotiations-data.js" onerror="void 0"></script>
+<script>
+// ---------- ingest (window.RAW_NEGOTIATIONS, pre-built; else paste/upload) ----------
+function getRaw(){
+  let r = window.RAW_NEGOTIATIONS;
+  if(!r) return null;
+  if(Array.isArray(r)) return r;
+  return (r.data&&r.data.negotiations) || r.negotiations || [];
+}
+// ---------- classifier (port of cerata-reflect) ----------
+const NARROW=[/does not (directly )?(fit|satisfy|align|match)/i,/too narrow/i,/specific (query|role|criterion|requirements?)/i,
+ /primary (criterion|discovery query|query)/i,/this specific/i,/not the .{0,30}host/i,/rather than/i,
+ /while .{0,60}(valuable|impressive|capable|exceptional|strong|adept|expertise|relevant)/i,/same-side/i,
+ /does not .{0,30}(indicate|state|list|mention|provide|demonstrate)/i,/no (explicit )?evidence/i,/lacks?\b/i,
+ /strict criteria/i,/remains unaddressed/i,/highly specific/i,/explicit confirmation/i,/his stated goals/i,/core intent/i];
+const FM=[/this specific/i,/specific (query|role|criterion|project|requirements?|technical)/i,/primary (criterion|discovery query|query)/i,/highly specific/i,/does not (fit|match|align|satisfy)/i,/strict criteria/i,/explicit confirmation/i,/for (his|their) own agent/i];
+const RM=[/no (explicit )?evidence/i,/does not (explicitly )?(list|mention|provide|indicate|state)/i,/lacks?\b/i,/while .{0,60}(strong|valuable|capable|expertise|impressive|exceptional)/i,/despite/i];
+const PM=[/while .{0,80}(but|however|reject|does not|cannot)/i,/materially (identical|the same)/i,/reiterat/i,/again reject/i,/as (stated|i previously)/i,/duplicate/i];
+const QE=[/mutual benefit/i,/both parties/i,/peer-to-peer/i,/directly (align|map)/i,/ideal/i,/strong (match|fit|connection)/i,/collaborat/i];
+const hit=(t,arr)=>arr.some(r=>r.test(t));
+const NRE=/\b([A-Z][A-Za-z.\-']+(?:\s+[A-Z][A-Za-z.\-']+){0,2})['’]?s?\b/;
+const STOP=new Set(["This","While","Christopher","The","His","Her","Their","I","Since","Despite","Although","Unfortunately","Given","As","Both","We","It"]);
+function nameOf(n){
+  const t=(n.latestMessagePreview||"").trim();
+  let m=t.match(/^([A-Z][A-Za-z.\-']+(?:\s+[A-Z][A-Za-z.\-']+){0,2})[\s,.:'’]/);
+  if(m&&!STOP.has(m[1].split(" ")[0])) return m[1].replace(/[,.:]$/,"");
+  for(const pat of [/for ([A-Z][A-Za-z.\-']+(?:\s+[A-Z][A-Za-z.\-']+){0,2})/,/\b([A-Z][A-Za-z.\-']+ [A-Z][A-Za-z.\-']+)['’]s\b/,/\bWhile ([A-Z][a-z]+)\b/,/^([A-Z][a-z]+),/,/\b([A-Z][a-z]+) (?:is an?|does not|lacks|while)\b/]){
+    m=t.match(pat); if(m&&!STOP.has(m[1].split(" ")[0])) return m[1];
+  }
+  return (n.counterpartyId||"?").slice(0,8);
+}
+function classify(rows){
+  const latest={};
+  rows.forEach(n=>{ const c=n.counterpartyId; if(!(c in latest)||(n.turnCount||0)>(latest[c].turnCount||0)) latest[c]=n; });
+  const out=[];
+  for(const c in latest){
+    const n=latest[c], prev=(n.latestMessagePreview||""), act=n.latestAction, role=n.role;
+    let cls;
+    if(/error|json parse/i.test(prev)) cls="glitch";
+    else if(act==="accept") cls = role==="candidate" ? "inbound" : "accept";
+    else if(act==="reject"||act==="rejected_or_stalled") cls = hit(prev,NARROW) ? "reopen" : "mismatch";
+    else if(act==="propose"&&role==="candidate") cls="inbound";
+    else cls="other";
+    out.push({id:c,name:nameOf(n),role,action:act,turns:n.turnCount||0,prev,cls});
+  }
+  return out;
+}
+// ---------- decision-surface attack-vector (port of cerata-surface, compact) ----------
+function surface(items){
+  const rej=items.filter(x=>x.cls==="reopen"||x.cls==="mismatch");
+  const tally={"f (role/keyword)":0,"ρ (capability)":0,"Ψ (contradiction)":0,"q (mechanical)":0};
+  rej.forEach(x=>{
+    const t=x.prev;
+    const f=(FM.filter(r=>r.test(t)).length), rho=(RM.filter(r=>r.test(t)).length),
+          psi=(PM.filter(r=>r.test(t)).length), q=(QE.some(r=>r.test(t))?0:1);
+    const sc={"f (role/keyword)":f*1.0,"ρ (capability)":rho*1.3,"Ψ (contradiction)":psi*1.4,"q (mechanical)":q*0.7};
+    const dom=Object.entries(sc).sort((a,b)=>b[1]-a[1])[0];
+    if(dom[1]>0) tally[dom[0]]++;
+  });
+  return {tally, nrej:rej.length};
+}
+
+// ---------- render ----------
+let DATA=[], FILTER="all", Q="";
+const F_DEFS=[["all","All"],["accept","Accepted"],["inbound","Inbound (came to you)"],["reopen","Re-open candidates"],["mismatch","True mismatches"],["glitch","Glitched (retry)"]];
+function counts(){ const c={all:DATA.length}; DATA.forEach(x=>c[x.cls]=(c[x.cls]||0)+1); return c; }
+function visible(){
+  return DATA.filter(x=>(FILTER==="all"||x.cls===FILTER)&&(!Q||x.name.toLowerCase().includes(Q)||x.prev.toLowerCase().includes(Q)));
+}
+function render(){
+  const c=counts(), s=surface(DATA);
+  const maxv=Math.max(1,...Object.values(s.tally));
+  const COLOR={accept:"--good",inbound:"--teal",reopen:"--gold",mismatch:"--faint",glitch:"--violet"};
+  document.getElementById("app").innerHTML=`
+   <div class="wrap">
+     <aside class="side">
+       <h1>🪸 Negotiations</h1><div class="sub">cerata · reflect + surface</div>
+       <input class="search" id="q" placeholder="Search name or reasoning…" value="${escAttr(Q)}"/>
+       <div class="stat-row">
+         <div class="stat"><b>${DATA.length}</b><span>parties</span></div>
+         <div class="stat"><b style="color:var(--good)">${c.accept||0}</b><span>accepted</span></div>
+         <div class="stat"><b style="color:var(--teal)">${c.inbound||0}</b><span>inbound</span></div>
+         <div class="stat"><b style="color:var(--gold)">${c.reopen||0}</b><span>re-open</span></div>
+       </div>
+       <div class="sec">Filter</div>
+       ${F_DEFS.map(([k,l])=>`<button class="filt ${FILTER===k?'on':''}" data-f="${k}">${l}<span class="n">${k==="all"?DATA.length:(c[k]||0)}</span></button>`).join("")}
+       <div class="sec">Data</div>
+       <button class="filt" id="reload">Load different data…</button>
+     </aside>
+     <main class="main">
+       <div class="card">
+         <h3>Decision surface — where rejections concentrate <span class="muted">(${s.nrej} rejections)</span></h3>
+         ${Object.entries(s.tally).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+           <div class="gauge"><div class="lab"><span>${k}</span><span>${v}</span></div>
+             <div class="trk"><div class="fl" style="width:${v/maxv*100}%;background:linear-gradient(90deg,var(--rose),var(--gold))"></div></div></div>`).join("")}
+         <div class="hint" style="margin-top:6px">the dominant axis is the gate's lever — usually <b>f</b> (role/keyword literalism). ρ is the cost: capability discarded.</div>
+       </div>
+       ${(c.reopen||0)>0&&FILTER==="all"?`<div class="card reopen-card">
+         <h2>♻️ Re-open candidates · ${c.reopen}</h2>
+         <div class="hint" style="margin-bottom:10px">your gate rejected these on a keyword while conceding value — likely false negatives. Warm re-opens re-score ~95. Two Hands: you decide who to recover.</div>
+         ${DATA.filter(x=>x.cls==="reopen").slice(0,8).map(rowHtml).join("")}
+         ${c.reopen>8?`<div class="hint">+${c.reopen-8} more — click the Re-open filter.</div>`:""}
+       </div>`:""}
+       <div class="card">
+         <h2>${F_DEFS.find(f=>f[0]===FILTER)[1]} <span class="muted">· ${visible().length}</span></h2>
+         ${visible().map(rowHtml).join("")||'<div class="hint">none</div>'}
+       </div>
+     </main>
+   </div>`;
+  bind();
+}
+function rowHtml(x){
+  const role = x.role==="candidate" ? '<span class="tag role">inbound→you</span>' : '<span class="tag role">you→them</span>';
+  return `<div class="row" data-id="${escAttr(x.id)}">
+    <div class="top"><span class="nm">${esc(x.name)}</span>
+      <span class="tag ${x.cls}">${x.cls}</span>${role}
+      <span class="turns">${x.turns} turns</span></div>
+    <div class="why">${esc(x.prev)||'<span class="muted">no reasoning</span>'}</div></div>`;
+}
+function esc(s){return (s==null?"":""+s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));}
+function escAttr(s){return esc(s).replace(/"/g,"&quot;");}
+function bind(){
+  document.getElementById("q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); document.getElementById("q").focus(); };
+  document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ FILTER=b.dataset.f; render(); });
+  document.getElementById("reload").onclick=loader;
+  document.querySelectorAll(".row").forEach(r=>r.onclick=()=>r.classList.toggle("open"));
+}
+function loader(){
+  document.getElementById("app").innerHTML=`<div class="loader">
+    <h1>🪸 Negotiations display</h1>
+    <p class="hint">Paste your Index <code>list_negotiations</code> output (all pages — an array, or {data:{negotiations:[…]}}), or drop a .json file. Everything is processed in your browser; nothing leaves the page.</p>
+    <textarea id="paste" placeholder='[ { "counterpartyId": "...", "role": "...", "latestAction": "accept|reject", "latestMessagePreview": "...", "turnCount": 3 }, ... ]'></textarea>
+    <div><button class="btn" id="go">Load</button><input type="file" id="file" accept=".json,application/json" style="display:none"/>
+    <button class="btn" id="pick">Choose file…</button></div>
+    <p class="hint" id="err"></p></div>`;
+  document.getElementById("go").onclick=()=>{ try{ ingest(JSON.parse(document.getElementById("paste").value)); }catch(e){ document.getElementById("err").textContent="Parse error: "+e.message; } };
+  document.getElementById("pick").onclick=()=>document.getElementById("file").click();
+  document.getElementById("file").onchange=e=>{ const f=e.target.files[0]; if(!f)return; const rd=new FileReader();
+    rd.onload=()=>{ try{ ingest(JSON.parse(rd.result)); }catch(er){ document.getElementById("err").textContent="Parse error: "+er.message; } }; rd.readAsText(f); };
+}
+function ingest(raw){
+  const rows = Array.isArray(raw)? raw : ((raw.data&&raw.data.negotiations)||raw.negotiations||[]);
+  if(!rows.length){ document.getElementById("err").textContent="No negotiations found in that JSON."; return; }
+  DATA=classify(rows); FILTER="all"; Q=""; render();
+}
+// boot
+const boot=getRaw();
+if(boot && boot.length){ DATA=classify(boot); render(); } else loader();
+</script>
+</body>
+</html>
