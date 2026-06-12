@@ -14,3 +14,8 @@ negotiations-panel/negotiations-data.js
 
 # offer urgency enrichment — personal departure data. NEVER commit.
 **/offers-enrich.js
+supabase/ingest/.salt
+web/node_modules/
+web/dist/
+.claude/
+web/tsconfig.tsbuildinfo
