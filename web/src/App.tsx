@@ -3,6 +3,7 @@ import {
   Bootstrap, Cohort, fetchBootstrap, fetchClass, fetchMarket, fetchPerson,
   ClassRead, MarketRead, PersonRead, cohortColor, fmtTime, lastLatency, Pair,
 } from './lib/api'
+import { EssenceView, EssenceWall } from './Essence'
 
 type Route =
   | { v: 'overview' }
@@ -10,12 +11,16 @@ type Route =
   | { v: 'class'; id: string }
   | { v: 'cohort'; idx: number }
   | { v: 'market'; alias?: string }
+  | { v: 'essences' }
+  | { v: 'essence'; alias: string }
 
 function parseHash(): Route {
   const h = decodeURIComponent(location.hash.replace(/^#/, ''))
   if (h.startsWith('person=')) return { v: 'person', alias: h.slice(7) }
   if (h.startsWith('class=')) return { v: 'class', id: h.slice(6) }
   if (h.startsWith('cohort=')) return { v: 'cohort', idx: +h.slice(7) }
+  if (h.startsWith('essence=')) return { v: 'essence', alias: h.slice(8) }
+  if (h === 'essences') return { v: 'essences' }
   if (h.startsWith('market')) return { v: 'market', alias: h.includes('=') ? h.split('=')[1] : undefined }
   return { v: 'overview' }
 }
@@ -203,6 +208,8 @@ function PersonView({ alias, boot }: { alias: string; boot: Bootstrap }) {
               <button key={n} className="person-tag" onClick={() => go('person=' + n)}>{n}</button>
             ))}
           </div>
+          <h4 style={{ marginTop: 18 }}>Rose Glass essence</h4>
+          <button className="chip k click" onClick={() => go('essence=' + p.alias)}>read this person through the lenses →</button>
         </div>
         <div className="block">
           <h4>Signature</h4>
@@ -445,8 +452,9 @@ export default function App() {
           )}
         </div>
         <div className="tabs">
-          <button className={'tab' + (route.v !== 'market' ? ' active' : '')} onClick={() => go('')}>Reads</button>
-          <button className={'tab' + (route.v === 'market' ? ' active' : '')} onClick={() => go('market')}>Attention Market</button>
+          <button className={'tab' + (['overview', 'person', 'class', 'cohort'].includes(route.v) ? ' active' : '')} onClick={() => go('')}>Reads</button>
+          <button className={'tab' + (route.v === 'market' ? ' active' : '')} onClick={() => go('market')}>Market</button>
+          <button className={'tab' + (['essences', 'essence'].includes(route.v) ? ' active' : '')} onClick={() => go('essences')}>Essence</button>
         </div>
         <div className="sec-title">Cohorts</div>
         {boot?.cohorts.map(c => (
@@ -474,6 +482,8 @@ export default function App() {
             {route.v === 'class' && <><div className="crumb"><button onClick={() => go('')}>⌂ reads</button> / event</div><ClassView id={route.id} boot={boot} /></>}
             {route.v === 'cohort' && <><div className="crumb"><button onClick={() => go('')}>⌂ reads</button> / cohort</div><CohortView idx={route.idx} boot={boot} /></>}
             {route.v === 'market' && <MarketView alias={route.alias} boot={boot} />}
+            {route.v === 'essences' && <EssenceWall />}
+            {route.v === 'essence' && <EssenceView alias={route.alias} />}
           </>
         )}
       </main>

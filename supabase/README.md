@@ -7,14 +7,55 @@ frontend in [`web/`](../web).
 ```
 EdgeOS pull ──ingest──▶  cerata schema (private, RLS deny-all)
                           people · events · attendance · cohort_runs/cohorts/members
-                                │
+Telegram / geo ──┐            signals · lens_reads · perceptions
+  live agent ────┘                │
                           SQL views (live derivations)
-                          co-attendance · enjoyment proxy · cohort affinity · predictions
+                          co-attendance · enjoyment proxy · cohort affinity · predictions · essence
                                 │
                           public RPCs (security definer, pseudonymous JSON)
                           cerata_bootstrap · cerata_person · cerata_class · cerata_market
+                          cerata_essence · cerata_essences
                                 │
                           web/ (Vite + React, publishable key only)
+                          reads · attention market · essence wall (interference polygons + λ)
+```
+
+## The live perception layer (Rose Glass)
+
+Beyond counting RSVPs, the platform reads people through the **Rose Glass** lens
+panel and stores the *perception*, never the words. The flow:
+
+```
+agent/rose_glass_live.py
+  pull telegram (telegram-cli-scripts)  →  aggregate per voice
+  → match identity to EdgeOS pull (same local salt)  →  pseudonym
+  → perceive each voice through the lens panel (Gemini + Claude, or 4-lens MCP)
+  → ship {kind:"perceptions"} : per-lens Ψ ρ q f τ, λ=σ² between lenses, Veritas
+```
+
+The structural invariant from names extends to words: **raw text never reaches
+the database.** A `cerata.signals` row holds only a content hash, length, and
+window; `cerata.lens_reads` holds each lens's five-dimension reading; and
+`cerata.perceptions` holds λ (the between-lens variance) and the Veritas flag —
+true only when every dimension's σ² is under threshold. No synthesis: the
+lenses are never averaged into a verdict; **the gap between them is the finding.**
+
+Run it:
+
+```bash
+export CERATA_ANON_KEY=...           # publishable/anon key (function auth)
+export CERATA_INGEST_TOKEN=...       # the cerata-ingest secret
+
+# two-lens bridge (rose-glass-horizon running on :8000)
+python3 supabase/agent/rose_glass_live.py --chat "Edge Esmeralda 2026" --perceiver bridge
+
+# live loop every 20 min
+python3 supabase/agent/rose_glass_live.py --watch 1200 --perceiver bridge
+
+# or: agent-driven 4-lens perception via the rose-glass-horizon MCP
+python3 supabase/agent/rose_glass_live.py --perceiver pending   # writes /tmp/cerata_pending_signals.json
+# (an agent perceives each signal_text with rose_glass_perceive, attaches reads/lambda/veritas)
+python3 supabase/agent/rose_glass_live.py --ship-reads /tmp/cerata_perceived.json
 ```
 
 ## Schema semantics (the roseglassdata.com discipline)

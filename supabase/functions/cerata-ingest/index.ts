@@ -63,6 +63,35 @@ Deno.serve(async (req) => {
         }
         n += 1
       }
+    } else if (body.kind === 'perceptions') {
+      // One row = one perceived signal: person (created if unseen), signal
+      // metadata (hash + length, never text), per-lens reads, λ rollup.
+      for (const r of body.rows) {
+        await sql`insert into cerata.people (ext_hash, alias) values (${r.ext_hash}, ${r.alias})
+                  on conflict (ext_hash) do nothing`
+        const [pp] = await sql`select id from cerata.people where ext_hash = ${r.ext_hash}`
+        const [sig] = await sql`insert into cerata.signals
+                    (person_id, source, provenance, window_start, window_end, content_hash, char_count)
+                  values (${pp.id}, ${r.source}, ${r.provenance ?? 'stated'}, ${r.window_start},
+                          ${r.window_end}, ${r.content_hash}, ${r.char_count})
+                  on conflict (person_id, source, content_hash)
+                  do update set char_count = excluded.char_count
+                  returning id`
+        await sql`delete from cerata.lens_reads where signal_id = ${sig.id}`
+        for (const lr of r.reads) {
+          await sql`insert into cerata.lens_reads (signal_id, lens, family, psi, rho, q_raw, q_opt, f, tau, notes)
+                    values (${sig.id}, ${lr.lens}, ${lr.family}, ${lr.psi}, ${lr.rho},
+                            ${lr.q_raw}, ${lr.q_opt}, ${lr.f}, ${lr.tau},
+                            ${lr.notes ? sql.json(lr.notes) : null})`
+        }
+        await sql`insert into cerata.perceptions (signal_id, lambda, veritas, veritas_threshold, n_lenses)
+                  values (${sig.id}, ${sql.json(r.lambda)}, ${r.veritas},
+                          ${r.veritas_threshold ?? 0.02}, ${r.reads.length})
+                  on conflict (signal_id) do update set
+                    lambda = excluded.lambda, veritas = excluded.veritas,
+                    veritas_threshold = excluded.veritas_threshold, n_lenses = excluded.n_lenses`
+        n += 1
+      }
     } else if (body.kind === 'verify') {
       const r = await sql`select
         (select count(*)::int from cerata.people) as people,

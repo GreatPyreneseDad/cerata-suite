@@ -284,3 +284,44 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .constellation circle:hover { r: 7; }
 
 .footnote { color: var(--faint); font-size: 11.5px; margin-top: 8px; line-height: 1.6; }
+
+/* ---------- essence / perception ---------- */
+.sig-head { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ess-grid { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .ess-grid { grid-template-columns: 1fr; } }
+
+.veritas {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 14px; border-radius: 12px; margin-bottom: 18px;
+}
+.veritas b { font-family: var(--mono); font-size: 11px; letter-spacing: 1.4px; }
+.veritas span { font-size: 12px; color: var(--dim); }
+.veritas.on { background: rgba(90, 209, 154, 0.06); border: 1px solid rgba(90, 209, 154, 0.28); }
+.veritas.on b { color: var(--good); }
+.veritas.off { background: rgba(154, 140, 255, 0.05); border: 1px solid rgba(154, 140, 255, 0.22); }
+.veritas.off b { color: var(--violet); }
+
+.lens-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--dim); font-family: var(--mono); }
+
+.lam-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; }
+.lam-glyph { width: 18px; font-family: 'Instrument Serif', serif; font-size: 16px; color: var(--dim); flex: none; text-align: center; }
+.lam-track { position: relative; flex: 1; height: 10px; background: var(--panel2); border-radius: 6px; overflow: visible; }
+.lam-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 6px; transition: width 0.8s cubic-bezier(0.2,0.8,0.2,1); }
+.lam-thresh { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--teal); opacity: 0.7; }
+.lam-val { width: 56px; text-align: right; font-family: var(--mono); font-size: 11px; flex: none; }
+
+.lens-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 800px) { .lens-notes { grid-template-columns: 1fr; } }
+.lens-col-head { font-family: var(--mono); font-size: 11px; letter-spacing: 0.6px; margin-bottom: 8px; }
+.lens-note { font-size: 12.5px; color: var(--dim); line-height: 1.5; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.lens-note b { font-family: 'Instrument Serif', serif; font-size: 14px; color: var(--ink); margin-right: 6px; }
+
+.ess-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.ess-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; text-align: center; transition: all 0.15s; }
+.ess-card:hover { border-color: var(--line2); transform: translateY(-2px); background: var(--panel2); }
+.ess-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ess-card-head b { font-size: 13.5px; }
+.vtag { font-family: var(--mono); font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 20px; }
+.vtag.on { color: var(--good); border: 1px solid rgba(90,209,154,0.4); }
+.vtag.off { color: var(--violet); border: 1px solid rgba(154,140,255,0.35); }
+.ess-card-foot { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--faint); }

@@ -47,6 +47,39 @@ export interface MarketRead {
   now: string; slots: MarketSlot[]
 }
 
+export const DIMS = ['psi', 'rho', 'q', 'f', 'tau'] as const
+export const DIM_LABEL: Record<string, string> = {
+  psi: 'Ψ internal consistency', rho: 'ρ wisdom depth', q: 'q emotional activation',
+  f: 'f relational topology', tau: 'τ temporal depth',
+}
+export const DIM_GLYPH: Record<string, string> = { psi: 'Ψ', rho: 'ρ', q: 'q', f: 'f', tau: 'τ' }
+
+export interface LensRead {
+  lens: string; family: 'google' | 'anthropic'
+  psi: number; rho: number; q_raw: number; q_opt: number; f: number; tau: number
+  notes?: Record<string, string> | null
+}
+export interface Signal {
+  signal_id: string; source: string; window_start: string | null; window_end: string | null
+  char_count: number; perceived_at: string
+  lambda: Record<string, number>; veritas: boolean; veritas_threshold: number
+  reads: LensRead[]
+}
+export interface Essence { alias: string; signals: Signal[] }
+export interface EssenceCard {
+  alias: string; cohort: number | null; n_signals: number; veritas_n: number
+  latest: { signal_id: string; source: string; lambda: Record<string, number>;
+    veritas: boolean; perceived_at: string; reads: LensRead[] }
+}
+
+export const fetchEssence = (alias: string) => rpc<Essence>('cerata_essence', { p_alias: alias })
+export const fetchEssences = () => rpc<EssenceCard[]>('cerata_essences')
+
+// q on the read is q_opt (post-saturation); the polygon plots all five 0..1.
+export const lensVec = (r: LensRead): Record<string, number> =>
+  ({ psi: r.psi, rho: r.rho, q: r.q_opt, f: r.f, tau: r.tau })
+export const lensFamilyColor = (f: string) => (f === 'google' ? '#7aa2ff' : '#ff6b85')
+
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const t0 = performance.now()
   const { data, error } = await supabase.rpc(fn, args)
