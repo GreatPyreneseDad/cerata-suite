@@ -344,3 +344,24 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .cult-fill { display: block; height: 100%; border-radius: 5px; }
 .cult-lam { width: 52px; flex: none; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--faint); }
 .cult-row.native .cult-name { font-weight: 600; }
+
+/* ---------- liveness ---------- */
+.live.flash { animation: liveflash 2.4s ease; }
+@keyframes liveflash {
+  0%,100% { border-color: rgba(79,216,196,0.25); background: rgba(79,216,196,0.06); }
+  20% { border-color: var(--good); background: rgba(90,209,154,0.18); box-shadow: 0 0 0 4px rgba(90,209,154,0.1); }
+}
+.livebar { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 4px; font-size: 11.5px; color: var(--dim); }
+.livebar b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.livebar .now { color: var(--good); }
+.livebar .now b { color: var(--good); }
+.next-ev { font-size: 11.5px; color: var(--faint); margin-top: 6px; line-height: 1.5; }
+.next-ev b { color: var(--dim); font-weight: 500; }
+.next-ev span { font-family: var(--mono); font-size: 10.5px; }
+.flash-toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 50;
+  background: rgba(90,209,154,0.14); border: 1px solid rgba(90,209,154,0.4); color: var(--good);
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.5px; padding: 9px 16px; border-radius: 22px;
+  animation: toastin 0.3s ease; backdrop-filter: blur(8px);
+}
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }

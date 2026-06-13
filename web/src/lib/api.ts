@@ -93,6 +93,24 @@ export interface PersonCulture {
 export const fetchCultures = () => rpc<Cultures>('cerata_cultures')
 export const fetchPersonCultures = (alias: string) => rpc<PersonCulture>('cerata_person_cultures', { p_alias: alias })
 
+export interface Pulse {
+  now: string; last_refresh: string | null; last_source: string | null
+  people: number; events: number; upcoming: number; attendance: number; live_now: number
+  next_event: { title: string; start: string; track: string | null } | null
+}
+export const fetchPulse = () => rpc<Pulse>('cerata_pulse')
+
+export function ago(iso: string | null, nowIso?: string): string {
+  if (!iso) return 'never'
+  const t = new Date(iso).getTime()
+  const now = nowIso ? new Date(nowIso).getTime() : Date.now()
+  const s = Math.max(0, Math.round((now - t) / 1000))
+  if (s < 60) return s + 's ago'
+  if (s < 3600) return Math.round(s / 60) + 'm ago'
+  if (s < 86400) return Math.round(s / 3600) + 'h ago'
+  return Math.round(s / 86400) + 'd ago'
+}
+
 export const GROUP_COLOR: Record<string, string> = {
   builder: '#7aa2ff', somatic: '#5ad19a', esoteric: '#9a8cff', social: '#4fd8c4',
   creative: '#e9c46a', knowledge: '#ff9aa6', role: '#f08a5d', age: '#ff6b85', shared: '#5d6477',

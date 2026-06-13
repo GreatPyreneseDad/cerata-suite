@@ -131,3 +131,27 @@ Security posture: the `cerata` schema is not exposed through PostgREST and is RL
 deny-all; the browser holds only the publishable key; the four RPCs return pseudonyms and public
 calendar data only; the ingest function refuses requests unless `CERATA_INGEST_TOKEN` is set and
 matched.
+
+## The live loop (auto-updating from village activity)
+
+The site updates itself. A `cerata-refresh` edge function pulls fresh EdgeOS
+events + rosters, pseudonymizes server-side (salt from Vault), and upserts the
+base facts; because the analytics are SQL views, the market / cohort-mix /
+enjoyment / predictions go current the instant those tables change. `pg_cron`
+fires it every 30 minutes (`net.http_post`, token read from Vault at fire time).
+Each pass writes a `cerata.refresh_log` heartbeat; `cerata_pulse()` exposes
+freshness + live counts + the next event. The frontend polls pulse every 60s
+(and on tab focus), shows "LIVE · UPDATED Xm ago", and re-fetches when new
+activity lands.
+
+Secrets live only in Supabase Vault (`cerata_edgeos_key`, `cerata_salt`,
+`cerata_ingest_token`) — never in source, function env, or the browser. The
+fast loop keeps events/RSVPs/market live; cohort re-clustering and the
+perception/culture passes stay operator-driven (heavier, language/LLM-bound).
+
+```bash
+# manual trigger (token from Vault)
+curl -X POST "$URL/functions/v1/cerata-refresh?source=edgeos-manual&days=7" -H "x-ingest-token: <token>"
+# inspect the schedule
+select * from cron.job where jobname = 'cerata-refresh';
+```

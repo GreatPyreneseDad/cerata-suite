@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bootstrap, Cohort, fetchBootstrap, fetchClass, fetchMarket, fetchPerson,
   ClassRead, MarketRead, PersonRead, cohortColor, fmtTime, lastLatency, Pair,
+  Pulse, fetchPulse, ago,
 } from './lib/api'
 import { EssenceView, EssenceWall } from './Essence'
 import { CulturesView, PersonCultureBlock } from './Cultures'
@@ -60,6 +61,34 @@ const Chips = ({ items, onClick }: { items: Pair[]; onClick?: (k: string) => voi
 
 function Spinner({ label }: { label: string }) {
   return <div className="spinner"><div className="ring" /> {label}</div>
+}
+
+/* Polls the freshness probe; `refresh` changes only when new village activity
+   lands, which callers use to re-fetch. `flash` pulses true briefly on update. */
+function useLive(intervalMs = 60000) {
+  const [pulse, setPulse] = useState<Pulse | null>(null)
+  const [flash, setFlash] = useState(false)
+  const lastRef = useRef<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    const poll = async () => {
+      try {
+        const p = await fetchPulse()
+        if (!alive) return
+        if (lastRef.current && p.last_refresh && p.last_refresh !== lastRef.current) {
+          setFlash(true); setTimeout(() => setFlash(false), 2600)
+        }
+        lastRef.current = p.last_refresh
+        setPulse(p)
+      } catch { /* keep last */ }
+    }
+    poll()
+    const id = setInterval(poll, intervalMs)
+    const onFocus = () => poll()
+    window.addEventListener('focus', onFocus)
+    return () => { alive = false; clearInterval(id); window.removeEventListener('focus', onFocus) }
+  }, [intervalMs])
+  return { pulse, flash, refresh: pulse?.last_refresh ?? null }
 }
 
 /* Deterministic cohort constellation — every clustered member is a star. */
@@ -403,6 +432,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(parseHash())
   const [q, setQ] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
+  const { pulse, flash, refresh } = useLive()
 
   useEffect(() => {
     fetchBootstrap().then(setBoot).catch(e => setErr(String(e)))
@@ -410,6 +440,11 @@ export default function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  // when new village activity lands, re-pull the bootstrap snapshot
+  useEffect(() => {
+    if (refresh) fetchBootstrap().then(setBoot).catch(() => {})
+  }, [refresh])
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -438,9 +473,21 @@ export default function App() {
           <h1>cerata</h1><span className="ver">SUPABASE EDITION</span>
         </div>
         <div className="tagline">revealed-preference reads · Edge Esmeralda 2026</div>
-        <div className="live">
-          <span className="pulse" />LIVE · POSTGRES{lastLatency ? ` · ${lastLatency}MS` : ''}
+        <div className={'live' + (flash ? ' flash' : '')}>
+          <span className="pulse" />LIVE{pulse?.last_refresh ? ` · UPDATED ${ago(pulse.last_refresh, pulse.now).toUpperCase()}` : ' · POSTGRES'}
         </div>
+        {pulse && (
+          <div className="livebar">
+            <span><b>{pulse.people}</b> people</span>
+            <span><b>{pulse.events}</b> events</span>
+            <span><b>{pulse.upcoming}</b> upcoming</span>
+            {pulse.live_now > 0 && <span className="now"><b>{pulse.live_now}</b> live now</span>}
+          </div>
+        )}
+        {pulse?.next_event && (
+          <div className="next-ev">next · <b>{pulse.next_event.title}</b> <span>{fmtTime(pulse.next_event.start)}</span></div>
+        )}
+        {flash && <div className="flash-toast">village activity updated</div>}
         <div className="search-wrap" ref={searchRef}>
           <input className="search" placeholder="Load a person or event…" value={q}
             onChange={e => setQ(e.target.value)} />
@@ -479,7 +526,7 @@ export default function App() {
           ingest → edge function · names → never
         </div>
       </aside>
-      <main className="main">
+      <main className="main" key={refresh ?? 'init'}>
         {!boot ? <Spinner label="booting from supabase…" /> : (
           <>
             {route.v === 'overview' && <Overview boot={boot} />}
