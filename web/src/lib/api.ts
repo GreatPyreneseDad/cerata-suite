@@ -63,13 +63,14 @@ export interface Signal {
   signal_id: string; source: string; window_start: string | null; window_end: string | null
   char_count: number; perceived_at: string
   lambda: Record<string, number>; veritas: boolean; veritas_threshold: number
+  inference?: string | null
   reads: LensRead[]
 }
 export interface Essence { alias: string; signals: Signal[] }
 export interface EssenceCard {
   alias: string; cohort: number | null; n_signals: number; veritas_n: number
   latest: { signal_id: string; source: string; lambda: Record<string, number>;
-    veritas: boolean; perceived_at: string; reads: LensRead[] }
+    veritas: boolean; perceived_at: string; reads: LensRead[]; inference?: string | null }
 }
 
 export const fetchEssence = (alias: string) => rpc<Essence>('cerata_essence', { p_alias: alias })

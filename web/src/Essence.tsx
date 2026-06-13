@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DIMS, DIM_GLYPH, DIM_LABEL, Essence, EssenceCard, LensRead, Signal,
   fetchEssence, fetchEssences, lensVec, lensFamilyColor,
@@ -96,6 +96,12 @@ function SignalBlock({ s }: { s: Signal }) {
         <span className="badge" style={{ color: 'var(--faint)' }}>raw text never stored</span>
       </div>
       <VeritasPanel s={s} />
+      {s.inference && (
+        <div className="inference">
+          <div className="inf-label">the polygon's reading · Hand 2 · offered, not declared</div>
+          <p>{s.inference}</p>
+        </div>
+      )}
       <div className="ess-grid">
         <div className="block" style={{ textAlign: 'center' }}>
           <h4>Interference polygon · Hand 1</h4>
@@ -139,22 +145,41 @@ function SignalBlock({ s }: { s: Signal }) {
 export function EssenceView({ alias }: { alias: string }) {
   const [e, setE] = useState<Essence | null>(null)
   const [err, setErr] = useState('')
+  const [roster, setRoster] = useState<EssenceCard[]>([])
   useEffect(() => { setE(null); fetchEssence(alias).then(setE).catch(x => setErr(String(x))) }, [alias])
+  useEffect(() => { fetchEssences().then(setRoster).catch(() => {}) }, [])
+  const options = useMemo(() =>
+    [...roster].sort((a, b) => a.alias.localeCompare(b.alias)), [roster])
   if (err) return <div className="err">{err}</div>
-  if (!e) return <div className="spinner"><div className="ring" /> reading the signal through the lenses…</div>
   return (
     <>
       <div className="crumb"><button onClick={() => go('')}>⌂ reads</button> / <button onClick={() => go('essences')}>essences</button> / {alias}</div>
-      <div className="hero" style={{ marginBottom: 18 }}>
-        <h2 style={{ fontSize: 34 }}>{alias} <span style={{ color: 'var(--faint)', fontSize: 16 }}>· essence</span></h2>
-        <p className="lede" style={{ fontSize: 14 }}>
+      <div className="hero" style={{ marginBottom: 16 }}>
+        <div className="mkt-head">
+          <h2 style={{ fontSize: 34 }}>{alias} <span style={{ color: 'var(--faint)', fontSize: 16 }}>· essence</span></h2>
+          {options.length > 0 && (
+            <>
+              <span style={{ color: 'var(--faint)', fontSize: 12 }}>read</span>
+              <select className="selfpick" value={alias} onChange={ev => go('essence=' + ev.target.value)}>
+                {options.map(o => (
+                  <option key={o.alias} value={o.alias}>
+                    {o.alias}{o.latest.veritas ? ' · veritas' : ''}
+                  </option>
+                ))}
+              </select>
+              <span style={{ color: 'var(--faint)', fontSize: 11.5 }}>{options.length} perceived</span>
+            </>
+          )}
+        </div>
+        <p className="lede" style={{ fontSize: 14, marginTop: 10 }}>
           Rose Glass read of this person's live language — perceived through independent LLM lenses, kept as the gap
           between them (λ), never synthesized into a verdict. The conversation stayed on the operator's machine; only
-          the reading reached the cloud.
+          the reading reached the cloud. Move through the roster to read any perceived voice.
         </p>
       </div>
-      {e.signals.length ? e.signals.map(s => <SignalBlock key={s.signal_id} s={s} />)
-        : <div className="empty">no perceived signals for this person yet</div>}
+      {!e ? <div className="spinner"><div className="ring" /> reading the signal through the lenses…</div>
+        : e.signals.length ? e.signals.map(s => <SignalBlock key={s.signal_id} s={s} />)
+        : <div className="empty">no perceived signals for this person yet — the live agent perceives more each pass</div>}
     </>
   )
 }

@@ -67,8 +67,16 @@ Deno.serve(async (req) => {
       // One row = one perceived signal: person (created if unseen), signal
       // metadata (hash + length, never text), per-lens reads, λ rollup.
       for (const r of body.rows) {
-        await sql`insert into cerata.people (ext_hash, alias) values (${r.ext_hash}, ${r.alias})
-                  on conflict (ext_hash) do nothing`
+        // collision-safe person upsert: existing ext_hash keeps its alias; a new
+        // person whose alias clashes with someone else's gets a hash suffix.
+        const ex = await sql`select id from cerata.people where ext_hash = ${r.ext_hash}`
+        if (!ex.length) {
+          let alias = r.alias
+          const clash = await sql`select 1 from cerata.people where alias = ${alias}`
+          if (clash.length) alias = alias + '-' + String(r.ext_hash).slice(0, 4)
+          await sql`insert into cerata.people (ext_hash, alias) values (${r.ext_hash}, ${alias})
+                    on conflict (ext_hash) do nothing`
+        }
         const [pp] = await sql`select id from cerata.people where ext_hash = ${r.ext_hash}`
         const [sig] = await sql`insert into cerata.signals
                     (person_id, source, provenance, window_start, window_end, content_hash, char_count)
@@ -84,12 +92,13 @@ Deno.serve(async (req) => {
                             ${lr.q_raw}, ${lr.q_opt}, ${lr.f}, ${lr.tau},
                             ${lr.notes ? sql.json(lr.notes) : null})`
         }
-        await sql`insert into cerata.perceptions (signal_id, lambda, veritas, veritas_threshold, n_lenses)
+        await sql`insert into cerata.perceptions (signal_id, lambda, veritas, veritas_threshold, n_lenses, inference)
                   values (${sig.id}, ${sql.json(r.lambda)}, ${r.veritas},
-                          ${r.veritas_threshold ?? 0.02}, ${r.reads.length})
+                          ${r.veritas_threshold ?? 0.02}, ${r.reads.length}, ${r.inference ?? null})
                   on conflict (signal_id) do update set
                     lambda = excluded.lambda, veritas = excluded.veritas,
-                    veritas_threshold = excluded.veritas_threshold, n_lenses = excluded.n_lenses`
+                    veritas_threshold = excluded.veritas_threshold, n_lenses = excluded.n_lenses,
+                    inference = excluded.inference`
         n += 1
       }
     } else if (body.kind === 'cultural_lenses') {

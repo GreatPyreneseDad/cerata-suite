@@ -104,20 +104,65 @@ def perceive_bridge(text, url):
 
 
 def bridge_to_row(resp):
-    """Normalize a rose-glass-horizon /perceive response into reads + λ + veritas."""
+    """Normalize a rose-glass-horizon /perceive response into reads + λ + veritas.
+    The bridge nests each dimension as read.<dim>.{amplitude,description}; errored
+    lenses (e.g. Gemini quota) are dropped so only valid perceivers ship."""
+    dims = ('psi', 'rho', 'q', 'f', 'tau')
     reads = []
-    for lens in resp.get('lenses', resp.get('reads', [])):
+    for lens in resp.get('lenses', []):
+        if lens.get('error'):
+            continue
+        rd = lens.get('read') or {}
+        amp = {d: (rd.get(d) or {}).get('amplitude') for d in dims}
+        if amp['psi'] is None or all((v in (None, 0)) for v in amp.values()):
+            continue
+        notes = {d: (rd.get(d) or {}).get('description', '') for d in dims}
         reads.append({
             'lens': lens.get('lens') or lens.get('model') or 'unknown',
             'family': lens.get('family') or ('google' if 'gemini' in str(lens.get('model', '')).lower() else 'anthropic'),
-            'psi': lens['psi'], 'rho': lens['rho'],
-            'q_raw': lens.get('q_raw', lens.get('q', 0)), 'q_opt': lens.get('q_opt', lens.get('q', 0)),
-            'f': lens['f'], 'tau': lens.get('tau', 0),
+            'psi': amp['psi'], 'rho': amp['rho'],
+            'q_raw': lens.get('q_raw', amp['q']), 'q_opt': amp['q'],
+            'f': amp['f'], 'tau': amp['tau'], 'notes': notes,
         })
     lam = resp.get('lambda') or resp.get('sigma2') or {}
     ver = resp.get('veritas')
-    veritas = bool(ver.get('invariant')) if isinstance(ver, dict) else bool(ver)
+    veritas = bool(ver.get('lens_invariant') or ver.get('invariant')) if isinstance(ver, dict) else bool(ver)
     return reads, lam, veritas
+
+
+DIM_LABEL = {'psi': 'internal coherence', 'rho': 'earned depth', 'q': 'emotional charge',
+             'f': 'belonging', 'tau': 'temporal reach'}
+DIM_GLYPH = {'psi': 'Ψ', 'rho': 'ρ', 'q': 'q', 'f': 'f', 'tau': 'τ'}
+ARCHETYPE = {
+    'f': 'a connector — builds the room more than the argument',
+    'psi': 'a coherent voice — holds one throughline',
+    'rho': 'a depth-carrier — speaks from integrated experience',
+    'q': 'a charged voice — runs on activation',
+    'tau': 'a long-arc voice — reaches across time',
+}
+
+
+def infer(reads, lam, veritas):
+    """The polygon's reading — Hand 2, offered not declared. Synthesizes the
+    shape (dominant + thin dimensions, lens agreement) into one short read."""
+    import statistics
+    dims = ['psi', 'rho', 'q', 'f', 'tau']
+    rkey = {'psi': 'psi', 'rho': 'rho', 'q': 'q_opt', 'f': 'f', 'tau': 'tau'}
+    if not reads:
+        return None
+    mean = {d: statistics.mean(r[rkey[d]] for r in reads) for d in dims}
+    top = max(dims, key=lambda d: mean[d])
+    low = min(dims, key=lambda d: mean[d])
+    arch = ARCHETYPE[top]
+    s = (f"{arch} ({DIM_GLYPH[top]} {mean[top]:.2f}), "
+         f"thinnest on {DIM_LABEL[low]} ({DIM_GLYPH[low]} {mean[low]:.2f}).")
+    if veritas:
+        s += " The lenses agree across every dimension (Veritas) — the shape is stable, not an artifact of one reader."
+    else:
+        dv = max(dims, key=lambda d: lam.get(d, 0))
+        s += (f" The lenses diverge most on {DIM_LABEL[dv]} (λ {lam.get(dv, 0):.3f}) — "
+              "surface and underside read it differently; that gap is yours to resolve.")
+    return s
 
 
 def ship(rows, batch=10):
@@ -130,12 +175,34 @@ def ship(rows, batch=10):
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + ANON,
             'x-ingest-token': TOKEN})
-        with urllib.request.urlopen(req, timeout=120) as r:
-            print('shipped:', r.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                print('shipped:', r.read().decode())
+        except urllib.error.HTTPError as e:
+            print(f'ship batch {i} failed {e.code}:', e.read().decode()[:300])
+
+
+def merge_chats(chats, limit):
+    """Pull several chats and merge each author's words across all of them —
+    richer behavioral text per voice than any single room gives."""
+    texts, times = {}, {}
+    for chat in chats:
+        try:
+            t, w = pull_telegram(chat, limit)
+        except SystemExit as e:
+            print(f'  skip {chat!r}: {e}'); continue
+        for a, txt in t.items():
+            texts[a] = (texts.get(a, '') + ' ' + txt).strip()
+        for a, (lo, hi) in w.items():
+            cur = times.get(a)
+            times[a] = (min(lo, cur[0]) if cur else lo, max(hi, cur[1]) if cur else hi)
+        print(f'  pulled {chat!r}: {len(t)} voices')
+    return texts, times
 
 
 def run_once(args):
-    texts, times = pull_telegram(args.chat, args.limit)
+    chats = [c.strip() for c in args.chats.split(';')] if args.chats else [args.chat]
+    texts, times = merge_chats(chats, args.limit) if len(chats) > 1 else pull_telegram(chats[0], args.limit)
     ranked = sorted(texts.items(), key=lambda kv: len(kv[1]), reverse=True)
     voices = [(a, t[:args.cap]) for a, t in ranked if len(t) >= args.min_chars][:args.top]
     ids = identities([a for a, _ in voices])
@@ -152,7 +219,8 @@ def run_once(args):
         if args.perceiver == 'bridge':
             resp = perceive_bridge(text, args.bridge)
             reads, lam, veritas = bridge_to_row(resp)
-            rows.append({**meta, 'reads': reads, 'lambda': lam, 'veritas': veritas})
+            rows.append({**meta, 'reads': reads, 'lambda': lam, 'veritas': veritas,
+                         'inference': infer(reads, lam, veritas)})
             print(f'  perceived {alias}: λ={lam} veritas={veritas}')
         else:
             pending.append({**meta, 'signal_text': text})
@@ -165,12 +233,15 @@ def run_once(args):
         print('strip signal_text, then: rose_glass_live.py --ship-reads <file>')
         return
     if rows:
+        json.dump(rows, open('/tmp/cerata_perceived.json', 'w'))  # save before ship
+        print(f'saved {len(rows)} perceived rows -> /tmp/cerata_perceived.json')
         ship(rows)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--chat', default='Edge Esmeralda 2026')
+    ap.add_argument('--chats', default='', help='semicolon-separated chat names; merges authors across all')
     ap.add_argument('--limit', type=int, default=400)
     ap.add_argument('--top', type=int, default=8)
     ap.add_argument('--min-chars', type=int, default=180)
@@ -185,6 +256,8 @@ def main():
         rows = json.load(open(args.ship_reads))
         for r in rows:
             r.pop('signal_text', None)  # belt and suspenders: text never ships
+            if not r.get('inference'):
+                r['inference'] = infer(r.get('reads', []), r.get('lambda', {}), r.get('veritas'))
         ship(rows)
         return
     while True:
