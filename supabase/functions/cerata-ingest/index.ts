@@ -92,6 +92,32 @@ Deno.serve(async (req) => {
                     veritas_threshold = excluded.veritas_threshold, n_lenses = excluded.n_lenses`
         n += 1
       }
+    } else if (body.kind === 'cultural_lenses') {
+      for (const L of body.rows) {
+        await sql`insert into cerata.cultural_lenses (slug, label, lens_group, profile, needs_language, supply_coverage)
+                  values (${L.slug}, ${L.label}, ${L.lens_group}, ${sql.json(L.profile)},
+                          ${L.needs_language}, ${L.supply_coverage})
+                  on conflict (slug) do update set
+                    label = excluded.label, lens_group = excluded.lens_group,
+                    profile = excluded.profile, needs_language = excluded.needs_language,
+                    supply_coverage = excluded.supply_coverage`
+        n += 1
+      }
+    } else if (body.kind === 'cultural_reads') {
+      for (let i = 0; i < body.rows.length; i += 500) {
+        const b = body.rows.slice(i, i + 500)
+        await sql`insert into cerata.cultural_reads (person_id, lens_id, fit, lambda, is_native, is_bicultural)
+                  select p.id, cl.id, v.fit, v.lambda, v.is_native, v.is_bicultural
+                  from jsonb_to_recordset(${sql.json(b)})
+                    as v(ext_hash text, lens_slug text, fit numeric, lambda numeric,
+                         is_native boolean, is_bicultural boolean)
+                  join cerata.people p on p.ext_hash = v.ext_hash
+                  join cerata.cultural_lenses cl on cl.slug = v.lens_slug
+                  on conflict (person_id, lens_id) do update set
+                    fit = excluded.fit, lambda = excluded.lambda,
+                    is_native = excluded.is_native, is_bicultural = excluded.is_bicultural`
+        n += b.length
+      }
     } else if (body.kind === 'verify') {
       const r = await sql`select
         (select count(*)::int from cerata.people) as people,

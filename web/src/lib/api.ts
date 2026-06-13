@@ -75,6 +75,29 @@ export interface EssenceCard {
 export const fetchEssence = (alias: string) => rpc<Essence>('cerata_essence', { p_alias: alias })
 export const fetchEssences = () => rpc<EssenceCard[]>('cerata_essences')
 
+export interface CultureLens {
+  slug: string; label: string; group: string; needs_language: boolean
+  supply_coverage: number | null; natives: number | null
+  native_mean_lambda: number | null; mean_fit: number | null; blind_spot: number | null
+}
+export interface Cultures {
+  meta: { lenses: number; computed_lenses: number; read_people: number
+    mean_legibility: number; illegible: number; note: string }
+  lenses: CultureLens[]
+}
+export interface PersonCulture {
+  alias: string; native: string | null; legibility: number | null
+  spectrum: { slug: string; label: string; group: string; fit: number
+    lambda: number; native: boolean; bicultural: boolean }[]
+}
+export const fetchCultures = () => rpc<Cultures>('cerata_cultures')
+export const fetchPersonCultures = (alias: string) => rpc<PersonCulture>('cerata_person_cultures', { p_alias: alias })
+
+export const GROUP_COLOR: Record<string, string> = {
+  builder: '#7aa2ff', somatic: '#5ad19a', esoteric: '#9a8cff', social: '#4fd8c4',
+  creative: '#e9c46a', knowledge: '#ff9aa6', role: '#f08a5d', age: '#ff6b85', shared: '#5d6477',
+}
+
 // q on the read is q_opt (post-saturation); the polygon plots all five 0..1.
 export const lensVec = (r: LensRead): Record<string, number> =>
   ({ psi: r.psi, rho: r.rho, q: r.q_opt, f: r.f, tau: r.tau })

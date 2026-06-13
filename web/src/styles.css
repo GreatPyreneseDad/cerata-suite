@@ -325,3 +325,22 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .vtag.on { color: var(--good); border: 1px solid rgba(90,209,154,0.4); }
 .vtag.off { color: var(--violet); border: 1px solid rgba(154,140,255,0.35); }
 .ess-card-foot { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+
+/* ---------- cultures ---------- */
+.lens-bar-row { display: flex; align-items: center; gap: 12px; margin: 7px 0; }
+.lens-bar-label { width: 220px; flex: none; font-size: 13px; }
+@media (max-width: 700px) { .lens-bar-label { width: 130px; font-size: 12px; } }
+.lens-bar-track { flex: 1; height: 12px; background: var(--panel2); border-radius: 6px; overflow: hidden; }
+.lens-bar-fill { display: block; height: 100%; border-radius: 6px; transition: width 0.7s cubic-bezier(0.2,0.8,0.2,1); }
+.lens-bar-meta { width: 130px; flex: none; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.lens-bar-meta .mut { color: var(--faint); }
+
+.cult-spectrum { margin-top: 4px; }
+.cult-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.cult-name { flex: 1; font-size: 13px; min-width: 0; }
+.cult-tag { font-family: var(--mono); font-size: 8px; letter-spacing: 1px; color: var(--good); border: 1px solid rgba(90,209,154,0.4); border-radius: 20px; padding: 1px 6px; margin-left: 8px; }
+.cult-tag.bi { color: var(--violet); border-color: rgba(154,140,255,0.4); }
+.cult-track { width: 130px; flex: none; height: 7px; background: var(--panel2); border-radius: 5px; overflow: hidden; }
+.cult-fill { display: block; height: 100%; border-radius: 5px; }
+.cult-lam { width: 52px; flex: none; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.cult-row.native .cult-name { font-weight: 600; }

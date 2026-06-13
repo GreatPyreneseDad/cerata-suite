@@ -20,6 +20,39 @@ Telegram / geo ──┐            signals · lens_reads · perceptions
                           reads · attention market · essence wall (interference polygons + λ)
 ```
 
+## The cultural-lens layer (legibility as a measurement)
+
+Beyond reading individuals, the platform reads the **village**. ~23 engineered
+cultural *perspectives* (builder / somatic / esoteric / social / creative /
+knowledge / role / age / shared) each carry a transparent `profile` over
+observable features (tags, tracks, host signatures). Every attendee is scored
+against every content lens by cosine fit; **native lens = argmin λ** (λ = 1 −
+fit), with a bicultural flag for any lens within ε of the native.
+
+The payload is the inverse. A lens whose profile doesn't match what the village
+actually programs — measured as `supply_coverage` against the real calendar — is
+a **structural blind spot**, and persistently high λ across all lenses means a
+person the instrument's worldview cannot natively read. Both are reported as
+properties of *the instrument*, never as demographic labels on pseudonymous
+people — the roseglassdata.com discipline turned on perception itself.
+
+On the real Edge Esmeralda data this surfaces immediately: VC (0 natives, 4%
+supply), Agartha, creative, crypto, and governance are present-but-unserved
+cultures; connection / longevity / women's-health are the village's native ones;
+**~36% of attendees are illegible** (best λ > 0.6) to every content lens. Age
+register lenses (boomer-first) and shared subcultures are registered with
+`needs_language=true` — they await the language deep-dive (country-of-origin ×
+age is the richer cut), where the hypothesis is the age axis carries the highest
+residual λ of all.
+
+```bash
+python3 supabase/agent/cultural_lenses.py --dry   # preview the legibility ranking
+python3 supabase/agent/cultural_lenses.py         # compute + ship (needs the ingest env)
+```
+
+RPCs: `cerata_cultures` (lens legibility ranking), `cerata_person_cultures`
+(a person's full culture spectrum). Frontend: the **Cultures** tab.
+
 ## The live perception layer (Rose Glass)
 
 Beyond counting RSVPs, the platform reads people through the **Rose Glass** lens

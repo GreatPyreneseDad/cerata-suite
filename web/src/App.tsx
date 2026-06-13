@@ -4,6 +4,7 @@ import {
   ClassRead, MarketRead, PersonRead, cohortColor, fmtTime, lastLatency, Pair,
 } from './lib/api'
 import { EssenceView, EssenceWall } from './Essence'
+import { CulturesView, PersonCultureBlock } from './Cultures'
 
 type Route =
   | { v: 'overview' }
@@ -13,6 +14,7 @@ type Route =
   | { v: 'market'; alias?: string }
   | { v: 'essences' }
   | { v: 'essence'; alias: string }
+  | { v: 'cultures' }
 
 function parseHash(): Route {
   const h = decodeURIComponent(location.hash.replace(/^#/, ''))
@@ -21,6 +23,7 @@ function parseHash(): Route {
   if (h.startsWith('cohort=')) return { v: 'cohort', idx: +h.slice(7) }
   if (h.startsWith('essence=')) return { v: 'essence', alias: h.slice(8) }
   if (h === 'essences') return { v: 'essences' }
+  if (h === 'cultures') return { v: 'cultures' }
   if (h.startsWith('market')) return { v: 'market', alias: h.includes('=') ? h.split('=')[1] : undefined }
   return { v: 'overview' }
 }
@@ -220,6 +223,7 @@ function PersonView({ alias, boot }: { alias: string; boot: Bootstrap }) {
           <button className="chip k click" onClick={() => go('market=' + p.alias)}>open the attention market →</button>
         </div>
       </div>
+      <PersonCultureBlock alias={p.alias} />
       <div className="block" style={{ marginTop: 18 }}>
         <h4>Events attended ({p.classes.length}{p.n_classes > p.classes.length ? ` of ${p.n_classes}` : ''})</h4>
         <div className="chips">
@@ -455,6 +459,7 @@ export default function App() {
           <button className={'tab' + (['overview', 'person', 'class', 'cohort'].includes(route.v) ? ' active' : '')} onClick={() => go('')}>Reads</button>
           <button className={'tab' + (route.v === 'market' ? ' active' : '')} onClick={() => go('market')}>Market</button>
           <button className={'tab' + (['essences', 'essence'].includes(route.v) ? ' active' : '')} onClick={() => go('essences')}>Essence</button>
+          <button className={'tab' + (route.v === 'cultures' ? ' active' : '')} onClick={() => go('cultures')}>Cultures</button>
         </div>
         <div className="sec-title">Cohorts</div>
         {boot?.cohorts.map(c => (
@@ -484,6 +489,7 @@ export default function App() {
             {route.v === 'market' && <MarketView alias={route.alias} boot={boot} />}
             {route.v === 'essences' && <EssenceWall />}
             {route.v === 'essence' && <EssenceView alias={route.alias} />}
+            {route.v === 'cultures' && <CulturesView />}
           </>
         )}
       </main>
