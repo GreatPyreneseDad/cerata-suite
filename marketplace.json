@@ -1,0 +1,20 @@
+{
+  "name": "cerata-rose-glass",
+  "interface": {
+    "displayName": "cerata · Rose Glass"
+  },
+  "plugins": [
+    {
+      "name": "cerata-rose-glass",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "USER_CONFIG"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

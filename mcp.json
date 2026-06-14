@@ -1,0 +1,12 @@
+{
+  "rose-glass": {
+    "type": "http",
+    "url": "${ROSE_GLASS_BRIDGE_URL}",
+    "description": "Rose Glass perception — fires independent LLM lenses at a signal and returns per-lens Ψ ρ q f τ, the between-lens variance λ, and the Veritas flag. Point at a running rose-glass-horizon bridge (local :8000 or a hosted deploy)."
+  },
+  "index": {
+    "type": "http",
+    "url": "https://protocol.index.network/mcp",
+    "headers": { "x-api-key": "${INDEX_API_KEY}" }
+  }
+}

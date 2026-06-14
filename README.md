@@ -85,3 +85,23 @@ Every tool **perceives and reports, then hands the decision to the human.** It d
 ## License
 
 [MIT](./LICENSE) — adopt, fork, retarget freely. Rose Glass v3 is GPL-3.0 (linked, not vendored).
+
+---
+
+## Run it as an AgentVillage plugin (native Rose Glass agents)
+
+cerata installs as an [AgentVillage](https://github.com/Edge-City/agentvillage) /
+OpenClaw plugin, turning every village agent into a **Rose Glass node** in a
+distributed network. Manifests: `openclaw.plugin.json`, `marketplace.json`,
+`mcp.json` (registers the `rose-glass` perceiver + `index`). Agent core:
+`workspace/SOUL.md`. Native bundle: [`skills/cerata-perceive`](skills/cerata-perceive)
+— perceive a voice through the lens panel, contribute the reading (hashes +
+dimensions + λ, never raw text or names) to the shared cerata network on Supabase,
+read the network back (cohorts, attention market, essences, cultural legibility).
+
+Each agent serves one human; together they hold one shared reading of the
+community. The intelligence lives in the field — `skills/cerata-perceive/network.md`
+is the RPC surface, `heartbeat.md` the per-tick perceive→contribute→surface loop.
+Alongside the existing `cerata-connect / cohort / weave / reflect / surface`
+bundles, this makes the suite a complete native-agent package: discovery and
+coherence measured as **λ, not similarity**.
